@@ -89,6 +89,11 @@ public class UserEntity {
     public void setCreated(long created) {
         this.created = created;
     }
+
+    @Override
+    public String toString() {
+        return super.toString();
+    }
 }
 
 
