@@ -57,15 +57,16 @@ public class UserRepositoryJDBCImpl implements UserRepository {
         String query = "SELECT id, login, password, name, secret, roles, EXTRACT(EPOCH FROM created) created, removed" +
                 " FROM users WHERE id = ?";
         try (
-                PreparedStatement pstmt = conn.prepareStatement(query);
+                final PreparedStatement pstmt = conn.prepareStatement(query);
         ) {
             pstmt.setLong(1, id);
-            ResultSet rs = pstmt.executeQuery();
+            final ResultSet rs = pstmt.executeQuery();
 
             UserEntity entity = null;
             if (rs.next()) {
                 entity = mapper.map(rs);
             }
+            rs.close();
             return Optional.ofNullable(entity);
         } catch (SQLException e) {
             throw new DataAccessException(e);
@@ -88,7 +89,9 @@ public class UserRepositoryJDBCImpl implements UserRepository {
             pstmt.execute();
 
             ResultSet rs = pstmt.getResultSet();
-            return mapper.map(rs);
+            final var savedEntity = mapper.map(rs);
+            rs.close();
+            return savedEntity;
 
         } catch (SQLException e) {
             throw new DataAccessException(e);
@@ -108,7 +111,9 @@ public class UserRepositoryJDBCImpl implements UserRepository {
             if (rs.next()) {
                 entity = mapper.map(rs);
             }
+            rs.close();
             return entity.isRemoved();
+
         } catch (SQLException e) {
             throw new DataAccessException(e);
         }
@@ -133,7 +138,9 @@ public class UserRepositoryJDBCImpl implements UserRepository {
             if (rs.next()) {
                 entity = mapper.map(rs);
             }
+            rs.close();
             return Optional.ofNullable(entity);
+
         } catch (SQLException e) {
             throw new DataAccessException(e);
         }
