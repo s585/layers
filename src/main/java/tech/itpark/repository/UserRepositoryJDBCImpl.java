@@ -88,8 +88,12 @@ public class UserRepositoryJDBCImpl implements UserRepository {
             pstmt.setObject(5, entity.getRoles().toArray(),Types.ARRAY);
             pstmt.execute();
 
-            ResultSet rs = pstmt.getResultSet();
-            final var savedEntity = mapper.map(rs);
+            final ResultSet rs = pstmt.getResultSet();
+
+            UserEntity savedEntity = null;
+            if (rs.next()) {
+                savedEntity = mapper.map(rs);
+            }
             rs.close();
             return savedEntity;
 
