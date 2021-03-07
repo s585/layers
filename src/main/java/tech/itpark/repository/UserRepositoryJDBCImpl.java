@@ -100,19 +100,19 @@ public class UserRepositoryJDBCImpl implements UserRepository {
 
     @Override
     public boolean removeById(Long id) {
-        String query = "UPDATE users SET removed = true WHERE id = ? " +
-                "RETURNING id, login, password, name, secret, roles, removed, EXTRACT(EPOCH FROM created) created";
+        String query = "UPDATE users SET removed = true WHERE id = ? RETURNING removed";
         try (final PreparedStatement psmt = conn.prepareStatement(query)
         ) {
             psmt.setLong(1, id);
             psmt.execute();
             final ResultSet rs = psmt.getResultSet();
-            UserEntity entity = null;
+
+            boolean removed = false;
             if (rs.next()) {
-                entity = mapper.map(rs);
+                removed = rs.getBoolean("removed");
             }
             rs.close();
-            return entity.isRemoved();
+            return removed;
 
         } catch (SQLException e) {
             throw new DataAccessException(e);
