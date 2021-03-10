@@ -21,20 +21,20 @@ public class Main {
         ) {
             UserRepository repository = new UserRepositoryJDBCImpl(connection);
             UserService service = new UserServiceDefaultImpl(repository);
+            System.out.println(repository.removeById(1L));
+
 //            System.out.println(repository.existsByLogin("admin"));
 //            System.out.println(repository.removeById(1L));
 //            System.out.println(userById.get().getLogin());
-            System.out.println(repository.save(new UserEntity(
-                    0L,
-                    "s585",
-                    "pass",
-                    "s585",
-                    "secret",
-                    Set.of("ROLE_USER"),
-                    false,
-                    Timestamp.valueOf(LocalDateTime.now()).getTime())));
-
-
+//            System.out.println(repository.save(new UserEntity(
+//                    0L,
+//                    "s585",
+//                    "pass",
+//                    "s585",
+//                    "secret",
+//                    Set.of("ROLE_USER"),
+//                    false,
+//                    Timestamp.valueOf(LocalDateTime.now()).getTime())));
             } catch (SQLException e) {
 
         }

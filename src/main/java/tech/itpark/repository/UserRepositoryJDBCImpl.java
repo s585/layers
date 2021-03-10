@@ -35,11 +35,11 @@ public class UserRepositoryJDBCImpl implements UserRepository {
 
     @Override
     public List<UserEntity> findAll() {
-        String query = "SELECT id, login, password, name, secret, roles," +
+        final String query = "SELECT id, login, password, name, secret, roles," +
                 " EXTRACT(EPOCH FROM created) created, removed FROM users ORDER BY id";
         try (
                 final Statement stmt = conn.createStatement();
-                final ResultSet rs = stmt.executeQuery(query);
+                final ResultSet rs = stmt.executeQuery(query)
         ) {
             List<UserEntity> result = new LinkedList<>();
             while (rs.next()) {
@@ -54,70 +54,27 @@ public class UserRepositoryJDBCImpl implements UserRepository {
 
     @Override
     public Optional<UserEntity> findById(Long id) {
-        String query = "SELECT id, login, password, name, secret, roles, EXTRACT(EPOCH FROM created) created, removed" +
+        final String query = "SELECT id, login, password, name, secret, roles, EXTRACT(EPOCH FROM created) created, removed" +
                 " FROM users WHERE id = ?";
-        try (
-                final PreparedStatement pstmt = conn.prepareStatement(query);
-        ) {
+        try (final PreparedStatement pstmt = conn.prepareStatement(query)) {
             pstmt.setLong(1, id);
-            final ResultSet rs = pstmt.executeQuery();
-
-            UserEntity entity = null;
-            if (rs.next()) {
-                entity = mapper.map(rs);
+            try (final ResultSet rs = pstmt.executeQuery()) {
+                return rs.next() ? Optional.of(mapper.map(rs)) : Optional.empty();
             }
-            rs.close();
-            return Optional.ofNullable(entity);
         } catch (SQLException e) {
             throw new DataAccessException(e);
         }
     }
 
     @Override
-    public UserEntity save(UserEntity entity) {
-        String query = "INSERT INTO users (login, password, name, secret, roles) VALUES (?,?,?,?,?)" +
-                " RETURNING id, login, password, name, secret, roles, removed, EXTRACT(EPOCH FROM created) created";
-        try (
-                PreparedStatement pstmt = conn.prepareStatement(query)
-//                conn.createArrayOf(entity.getRoles().toArray())
-        ) {
-            pstmt.setString(1, entity.getLogin());
-            pstmt.setString(2, entity.getPassword());
-            pstmt.setString(3, entity.getName());
-            pstmt.setString(4, entity.getSecret());
-            pstmt.setObject(5, entity.getRoles().toArray(),Types.ARRAY);
-            pstmt.execute();
-
-            final ResultSet rs = pstmt.getResultSet();
-
-            UserEntity savedEntity = null;
-            if (rs.next()) {
-                savedEntity = mapper.map(rs);
+    public Optional<UserEntity> findByLogin(String login) {
+        final String query = "SELECT id, login, password, name, secret, roles, EXTRACT(EPOCH FROM created) created, removed" +
+                " FROM users WHERE login = ?";
+        try (final PreparedStatement pstmt = conn.prepareStatement(query)) {
+            pstmt.setString(1, login);
+            try (final ResultSet rs = pstmt.executeQuery()) {
+                return rs.next() ? Optional.of(mapper.map(rs)) : Optional.empty();
             }
-            rs.close();
-            return savedEntity;
-
-        } catch (SQLException e) {
-            throw new DataAccessException(e);
-        }
-    }
-
-    @Override
-    public boolean removeById(Long id) {
-        String query = "UPDATE users SET removed = true WHERE id = ? RETURNING removed";
-        try (final PreparedStatement psmt = conn.prepareStatement(query)
-        ) {
-            psmt.setLong(1, id);
-            psmt.execute();
-            final ResultSet rs = psmt.getResultSet();
-
-            boolean removed = false;
-            if (rs.next()) {
-                removed = rs.getBoolean("removed");
-            }
-            rs.close();
-            return removed;
-
         } catch (SQLException e) {
             throw new DataAccessException(e);
         }
@@ -125,26 +82,59 @@ public class UserRepositoryJDBCImpl implements UserRepository {
 
     @Override
     public boolean existsByLogin(String login) {
-        return findByLogin(login) == null ? false : true;
+        return findByLogin(login).isPresent();
     }
 
     @Override
-    public Optional<UserEntity> findByLogin(String login) {
-        String query = "SELECT id, login, password, name, secret, roles, EXTRACT(EPOCH FROM created) created, removed" +
-                " FROM users WHERE login = ?";
-        try (
-                PreparedStatement pstmt = conn.prepareStatement(query);
-        ) {
-            pstmt.setString(1, login);
-            ResultSet rs = pstmt.executeQuery();
-
-            UserEntity entity = null;
-            if (rs.next()) {
-                entity = mapper.map(rs);
+    public UserEntity save(UserEntity entity) {
+        if (entity.getId() == 0) {
+            final String query = "INSERT INTO users (login, password, name, secret, roles) VALUES (?,?,?,?,?)" +
+                    " RETURNING id, login, password, name, secret, roles, removed, EXTRACT(EPOCH FROM created) created";
+            try (final PreparedStatement pstmt = conn.prepareStatement(query)) {
+                pstmt.setString(1, entity.getLogin());
+                pstmt.setString(2, entity.getPassword());
+                pstmt.setString(3, entity.getName());
+                pstmt.setString(4, entity.getSecret());
+                pstmt.setObject(5, entity.getRoles().toArray(), Types.ARRAY);
+                UserEntity savedEntity = null;
+                try (final ResultSet rs = pstmt.executeQuery()) {
+                    if (rs.next()) {
+                        savedEntity = mapper.map(rs);
+                    }
+                } return savedEntity;
+            } catch (SQLException e) {
+                throw new DataAccessException(e);
             }
-            rs.close();
-            return Optional.ofNullable(entity);
+        }
 
+        final String query = "UPDATE users SET login = ?, password = ?, name = ?, secret = ?, roles = ? WHERE id = ? " +
+                "RETURNING id, login, password, name, secret, roles, removed, EXTRACT(EPOCH FROM created) created";
+        try (final PreparedStatement pstmt = conn.prepareStatement(query)) {
+            pstmt.setString(1, entity.getLogin());
+            pstmt.setString(2, entity.getPassword());
+            pstmt.setString(3, entity.getName());
+            pstmt.setString(4, entity.getSecret());
+            pstmt.setObject(5, entity.getRoles().toArray(), Types.ARRAY);
+            pstmt.setLong(6, entity.getId());
+            UserEntity savedEntity = null;
+            try (final ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    savedEntity = mapper.map(rs);
+                }
+            } return savedEntity;
+        } catch (SQLException e) {
+            throw new DataAccessException(e);
+        }
+    }
+
+    @Override
+    public boolean removeById(Long id) {
+        final String query = "UPDATE users SET removed = true WHERE id = ? RETURNING removed";
+        try (final PreparedStatement pstmt = conn.prepareStatement(query)) {
+            pstmt.setLong(1, id);
+            try (final ResultSet rs = pstmt.executeQuery()) {
+                return rs.next() && rs.getBoolean("removed");
+            }
         } catch (SQLException e) {
             throw new DataAccessException(e);
         }
