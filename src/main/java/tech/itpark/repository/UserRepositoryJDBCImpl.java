@@ -103,16 +103,13 @@ public class UserRepositoryJDBCImpl implements UserRepository {
                 pstmt.setString(2, entity.getPassword());
                 pstmt.setString(3, entity.getName());
                 pstmt.setString(4, entity.getSecret());
-                pstmt.setObject(5, entity.getRoles().toArray(), Types.ARRAY);
+                pstmt.setObject(5, conn.createArrayOf("TEXT", entity.getRoles().toArray()));
 
                 try (final ResultSet rs = pstmt.executeQuery()) {
-                    try {
-                        if (rs.next()) {
-                             return mapper.map(rs);
-                        }
-                    } catch (SQLException e) {
-                        throw new DataAccessException(e);
+                    if (!rs.next()) {
+                        throw new DataAccessException();
                     }
+                    return mapper.map(rs);
                 }
             } catch (SQLException e) {
                 throw new DataAccessException(e);
@@ -126,14 +123,15 @@ public class UserRepositoryJDBCImpl implements UserRepository {
             pstmt.setString(2, entity.getPassword());
             pstmt.setString(3, entity.getName());
             pstmt.setString(4, entity.getSecret());
-            pstmt.setObject(5, entity.getRoles().toArray(), Types.ARRAY);
+            pstmt.setObject(5, conn.createArrayOf("TEXT", entity.getRoles().toArray()));
             pstmt.setLong(6, entity.getId());
-            UserEntity savedEntity = null;
+            
             try (final ResultSet rs = pstmt.executeQuery()) {
-                if (rs.next()) {
-                    savedEntity = mapper.map(rs);
+                if (!rs.next()) {
+                    throw new DataAccessException();
                 }
-            } return savedEntity;
+                return mapper.map(rs);
+            }
         } catch (SQLException e) {
             throw new DataAccessException(e);
         }
