@@ -104,12 +104,16 @@ public class UserRepositoryJDBCImpl implements UserRepository {
                 pstmt.setString(3, entity.getName());
                 pstmt.setString(4, entity.getSecret());
                 pstmt.setObject(5, entity.getRoles().toArray(), Types.ARRAY);
-                UserEntity savedEntity = null;
+
                 try (final ResultSet rs = pstmt.executeQuery()) {
-                    if (rs.next()) {
-                        savedEntity = mapper.map(rs);
+                    try {
+                        if (rs.next()) {
+                             return mapper.map(rs);
+                        }
+                    } catch (SQLException e) {
+                        throw new DataAccessException(e);
                     }
-                } return savedEntity;
+                }
             } catch (SQLException e) {
                 throw new DataAccessException(e);
             }
