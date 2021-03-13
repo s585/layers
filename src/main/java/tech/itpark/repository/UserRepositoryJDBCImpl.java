@@ -82,7 +82,15 @@ public class UserRepositoryJDBCImpl implements UserRepository {
 
     @Override
     public boolean existsByLogin(String login) {
-        return findByLogin(login).isPresent();
+        final String query = "SELECT login FROM users WHERE login = ?";
+        try (final PreparedStatement pstmt = conn.prepareStatement(query)) {
+            pstmt.setString(1, login);
+            try (final ResultSet rs = pstmt.executeQuery()) {
+                return rs.next();
+            }
+        } catch (SQLException e) {
+            throw new DataAccessException(e);
+        }
     }
 
     @Override
