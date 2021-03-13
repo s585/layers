@@ -1,6 +1,7 @@
 package tech.itpark.repository;
 
 import tech.itpark.entity.UserEntity;
+import tech.itpark.exception.UserNotFoundException;
 
 import java.util.*;
 
@@ -32,9 +33,12 @@ public class UserRepositoryInMemoryImpl implements UserRepository {
 
     @Override
     public boolean removeById(Long id) {
-//        return idToEntity.remove(id) != null;
-        idToEntity.get(id).setRemoved(true);
-        return idToEntity.get(id).isRemoved();
+        try {
+            idToEntity.get(id).setRemoved(true);
+            return idToEntity.get(id).isRemoved();
+        } catch (NullPointerException e) {
+            throw new UserNotFoundException(e);
+        }
     }
 
     @Override
